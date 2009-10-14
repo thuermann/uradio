@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.3 2009/10/14 07:59:48 urs Exp $
+ * $Id: uradio.c,v 1.4 2009/10/14 07:59:58 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 static void svc(int s, char **names, int count);
 static int play(const char *fname, int s);
@@ -24,6 +25,8 @@ int main(int argc, char **argv)
 	pid_t pid;
 	char *files[16834];
 	char line[1024];
+	struct sockaddr_in peer;
+	socklen_t peerlen = sizeof(peer);
 
 	while (fgets(line, sizeof(line), stdin)) {
 		size_t len = strlen(line);
@@ -46,8 +49,11 @@ int main(int argc, char **argv)
 	listen(s, 128);
 
 	while (1) {
-		if ((n = accept(s, NULL, NULL)) < 0)
+		if ((n = accept(s, (struct sockaddr *)&peer, &peerlen)) < 0)
 			continue;
+
+		printf("New client from %s\n", inet_ntoa(peer.sin_addr));
+
 		if ((pid = fork()) < 0) {
 			perror("fork");
 			close(n);
