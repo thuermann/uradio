@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.2 2009/10/14 07:59:15 urs Exp $
+ * $Id: uradio.c,v 1.3 2009/10/14 07:59:48 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -145,7 +145,7 @@ static int play(const char *fname, int s)
 		       next.tv_sec, next.tv_usec);
 #endif
 		write(s, buf, nbytes + 4);
-		if (count++ >= 1000)
+		if (++count >= 1148)
 			break;
 	} while (nbytes == size - 4);
 	fclose(fp);
