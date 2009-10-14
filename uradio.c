@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.4 2009/10/14 07:59:58 urs Exp $
+ * $Id: uradio.c,v 1.5 2009/10/14 08:00:08 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -14,8 +15,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-static void svc(int s, char **names, int count);
-static int play(const char *fname, int s);
+static void svc(int client, int s, char **names, int count);
+static int play(int client, const char *fname, int s);
 static int mp3_hdr(const unsigned char *s, int *freq, int *bitrate, int *pad);
 
 int main(int argc, char **argv)
@@ -27,6 +28,7 @@ int main(int argc, char **argv)
 	char line[1024];
 	struct sockaddr_in peer;
 	socklen_t peerlen = sizeof(peer);
+	int client = 0;
 
 	while (fgets(line, sizeof(line), stdin)) {
 		size_t len = strlen(line);
@@ -52,7 +54,8 @@ int main(int argc, char **argv)
 		if ((n = accept(s, (struct sockaddr *)&peer, &peerlen)) < 0)
 			continue;
 
-		printf("New client from %s\n", inet_ntoa(peer.sin_addr));
+		printf("New client %.2d from %s\n",
+		       ++client, inet_ntoa(peer.sin_addr));
 
 		if ((pid = fork()) < 0) {
 			perror("fork");
@@ -64,7 +67,7 @@ int main(int argc, char **argv)
 			if (fork() > 0)
 				_exit(0);
 			close(s);
-			svc(n, files, count);
+			svc(client, n, files, count);
 			_exit(0);
 		}
 	}
@@ -77,7 +80,7 @@ static const char header[] =
 	"icy-bitrate: 128\r\ngenre: Mix\r\n"
 	"\r\n";
 
-static void svc(int s, char **names, int count)
+static void svc(int client, int s, char **names, int count)
 {
 	int idx;
 
@@ -85,11 +88,11 @@ static void svc(int s, char **names, int count)
 
 	while (1) {
 		idx = rand() % count;
-		play(names[idx], s);
+		play(client, names[idx], s);
 	}
 }
 
-static int play(const char *fname, int s)
+static int play(int client, const char *fname, int s)
 {
 	FILE *fp;
 	int nbytes;
@@ -97,8 +100,11 @@ static int play(const char *fname, int s)
 	int freq, bitrate, pad, size, time, sl;
 	struct timeval now, next;
 	int count;
+	char ts[32];
 
-	printf("play %s\n", fname);
+	gettimeofday(&now, NULL);
+	strftime(ts, sizeof(ts), "%T", localtime(&now.tv_sec));
+	printf("%.2d  %s.%.6ld  play %s\n", client, ts, now.tv_usec, fname);
 
 	if (!(fp = fopen(fname, "r"))) {
 		perror(fname);
