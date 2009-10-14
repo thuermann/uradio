@@ -1,26 +1,36 @@
 /*
- * $Id: uradio.c,v 1.1 2009/10/13 21:38:41 urs Exp $
+ * $Id: uradio.c,v 1.2 2009/10/14 07:59:15 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-char *files[16834];
+static void svc(int s, char **names, int count);
+static int play(const char *fname, int s);
+static int mp3_hdr(const unsigned char *s, int *freq, int *bitrate, int *pad);
 
 int main(int argc, char **argv)
 {
 	int s, n, count = 0;
 	struct sockaddr_in addr;
 	pid_t pid;
+	char *files[16834];
 	char line[1024];
 
-	while (gets(line))
+	while (fgets(line, sizeof(line), stdin)) {
+		size_t len = strlen(line);
+		if (line[len - 1] == '\n')
+			line[len - 1] = 0;
 		files[count++] = strdup(line);
+	}
 
 	if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("socket");
@@ -54,14 +64,14 @@ int main(int argc, char **argv)
 	}
 }
 
-char header[] =
+static const char header[] =
 	"HTTP/1.0 200 OK\r\n"
 	"Content-Type: audio/mpeg\r\n"
 	"icy-name: urs' radio\r\n"
 	"icy-bitrate: 128\r\ngenre: Mix\r\n"
 	"\r\n";
 
-int svc(int s, char **names, int count)
+static void svc(int s, char **names, int count)
 {
 	int idx;
 
@@ -73,7 +83,7 @@ int svc(int s, char **names, int count)
 	}
 }
 
-int play(char *fname, int s)
+static int play(const char *fname, int s)
 {
 	FILE *fp;
 	int nbytes;
@@ -143,7 +153,7 @@ int play(char *fname, int s)
 	return 0;
 }
 
-static int tab_bitrate[][2] = {
+static const int tab_bitrate[][2] = {
 	{  -1,  -1 },
 	{  32,   8 },
 	{  40,  16 },
@@ -162,14 +172,14 @@ static int tab_bitrate[][2] = {
 	{  -1,  -1 },
 };
 
-static int tab_freq[][2] = {
+static const int tab_freq[][2] = {
 	{ 44100, 22050 },
 	{ 48000, 24000 },
 	{ 32000, 16000 },
 	{    -1,    -1 },
 };
 
-int mp3_hdr(unsigned char *s, int *freq, int *bitrate, int *pad)
+static int mp3_hdr(const unsigned char *s, int *freq, int *bitrate, int *pad)
 {
 	unsigned int h;
 	int h_version, h_layer, h_bitrate, h_freq, h_pad, col;
