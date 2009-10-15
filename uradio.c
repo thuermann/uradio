@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.9 2009/10/15 11:09:54 urs Exp $
+ * $Id: uradio.c,v 1.10 2009/10/15 11:10:04 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -18,6 +18,8 @@
 static void svc(int client, int s, char **names, int count);
 static int play(int client, const char *fname, int s);
 static int mp3_hdr(const unsigned char *s, int *freq, int *bitrate, int *pad);
+
+static int debug = 1;
 
 int main(int argc, char **argv)
 {
@@ -96,7 +98,8 @@ static void svc(int client, int s, char **names, int count)
 static int play(int client, const char *fname, int s)
 {
 	static struct timeval next = { 0, 0 };
-	struct timeval now;
+	static time_t t0 = 0;
+	struct timeval now, this;
 	FILE *fp;
 	int nbytes;
 	unsigned char buf[4096];
@@ -108,8 +111,10 @@ static int play(int client, const char *fname, int s)
 	strftime(ts, sizeof(ts), "%T", localtime(&now.tv_sec));
 	printf("%.2d  %s.%.6ld  play %s\n", client, ts, now.tv_usec, fname);
 
-	if (next.tv_sec == 0)
+	if (next.tv_sec == 0) {
 		next = now;
+		t0   = now.tv_sec;
+	}
 
 	if (!(fp = fopen(fname, "r"))) {
 		perror(fname);
@@ -129,32 +134,34 @@ static int play(int client, const char *fname, int s)
 		fsize = bitrate * 1000 / 8 * 1152 / freq + pad;
 		ftime = 1000000 * 1152 / freq;
 		nbytes = fread(buf + 4, 1, fsize - 4, fp);
-#ifdef DEBUG
-		printf("ftime %d\n", ftime);
-#endif
+
 		gettimeofday(&now, NULL);
-		sl = 1000000 * (next.tv_sec - now.tv_sec)
-			+ (next.tv_usec - now.tv_usec);
-#ifdef DEBUG
-		printf("%ld.%.6ld %ld.%.6ld %ld\n",
-		       now.tv_sec, now.tv_usec,
-		       next.tv_sec, next.tv_usec,
-		       sl);
-#endif
-		if (sl > 0)
-			usleep(sl);
+		this = next;
+		sl = 1000000 * (this.tv_sec - now.tv_sec)
+			+ (this.tv_usec - now.tv_usec);
 		if ((next.tv_usec += ftime) >= 1000000) {
 			next.tv_usec -= 1000000;
 			next.tv_sec++;
 		}
-#ifdef DEBUG
-		printf("%ld.%.6ld\n",
-		       next.tv_sec, next.tv_usec);
-#endif
+		if (debug && count < 10) {
+			printf("%.2d  this = %ld.%.6ld, now = %ld.%.6ld, "
+			       "sl = %6d, next(%+d) = %ld.%.6ld\n",
+			       client,
+			       this.tv_sec - t0, this.tv_usec,
+			       now.tv_sec - t0, now.tv_usec,
+			       sl, ftime,
+			       next.tv_sec - t0, next.tv_usec);
+		}
+		if (sl > 0)
+			usleep(sl);
 		write(s, buf, nbytes + 4);
 		if (++count >= 1148)
 			break;
 	} while (nbytes == fsize - 4);
+	if (debug) {
+		printf("%.2d  next = %ld.%.6ld\n",
+		       client, next.tv_sec - t0, next.tv_usec);
+	}
 	fclose(fp);
 
 	return 0;
