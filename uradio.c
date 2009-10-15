@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.8 2009/10/15 11:09:44 urs Exp $
+ * $Id: uradio.c,v 1.9 2009/10/15 11:09:54 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -95,11 +95,12 @@ static void svc(int client, int s, char **names, int count)
 
 static int play(int client, const char *fname, int s)
 {
+	static struct timeval next = { 0, 0 };
+	struct timeval now;
 	FILE *fp;
 	int nbytes;
 	unsigned char buf[4096];
 	int freq, bitrate, pad, fsize, ftime, sl;
-	struct timeval now, next;
 	int count;
 	char ts[32];
 
@@ -107,15 +108,19 @@ static int play(int client, const char *fname, int s)
 	strftime(ts, sizeof(ts), "%T", localtime(&now.tv_sec));
 	printf("%.2d  %s.%.6ld  play %s\n", client, ts, now.tv_usec, fname);
 
+	if (next.tv_sec == 0)
+		next = now;
+
 	if (!(fp = fopen(fname, "r"))) {
 		perror(fname);
 		return -1;
 	}
+
 	fseek(fp, -128, SEEK_END);
 	fread(buf, 1, 128, fp);
 	write(s, buf, 128);
 	rewind(fp);
-	memset(&next, 0, sizeof(next));
+
 	count = 0;
 	do {
 		nbytes = fread(buf, 1, 4, fp);
@@ -128,8 +133,6 @@ static int play(int client, const char *fname, int s)
 		printf("ftime %d\n", ftime);
 #endif
 		gettimeofday(&now, NULL);
-		if (next.tv_sec == 0)
-			next = now;
 		sl = 1000000 * (next.tv_sec - now.tv_sec)
 			+ (next.tv_usec - now.tv_usec);
 #ifdef DEBUG
