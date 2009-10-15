@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.5 2009/10/14 08:00:08 urs Exp $
+ * $Id: uradio.c,v 1.6 2009/10/15 11:09:24 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -86,6 +86,7 @@ static void svc(int client, int s, char **names, int count)
 
 	write(s, header, sizeof(header) - 1);
 
+	srand(time(NULL));
 	while (1) {
 		idx = rand() % count;
 		play(client, names[idx], s);
