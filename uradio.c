@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.6 2009/10/15 11:09:24 urs Exp $
+ * $Id: uradio.c,v 1.7 2009/10/15 11:09:34 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -98,7 +98,7 @@ static int play(int client, const char *fname, int s)
 	FILE *fp;
 	int nbytes;
 	unsigned char buf[4096];
-	int freq, bitrate, pad, size, time, sl;
+	int freq, bitrate, pad, fsize, ftime, sl;
 	struct timeval now, next;
 	int count;
 	char ts[32];
@@ -121,11 +121,11 @@ static int play(int client, const char *fname, int s)
 		nbytes = fread(buf, 1, 4, fp);
 		if (mp3_hdr(buf, &freq, &bitrate, &pad) < 0)
 			break;
-		size = bitrate * 1000 / 8 * 1152 / freq + pad;
-		time = 1000000 * 1152 / freq;
-		nbytes = fread(buf + 4, 1, size - 4, fp);
+		fsize = bitrate * 1000 / 8 * 1152 / freq + pad;
+		ftime = 1000000 * 1152 / freq;
+		nbytes = fread(buf + 4, 1, fsize - 4, fp);
 #ifdef DEBUG
-		printf("time %d\n", time);
+		printf("ftime %d\n", ftime);
 #endif
 		gettimeofday(&now, NULL);
 		if (next.tv_sec) {
@@ -149,7 +149,7 @@ static int play(int client, const char *fname, int s)
 			       sl);
 #endif
 		}
-		if ((next.tv_usec += time) >= 1000000) {
+		if ((next.tv_usec += ftime) >= 1000000) {
 			next.tv_usec -= 1000000;
 			next.tv_sec++;
 		}
@@ -160,7 +160,7 @@ static int play(int client, const char *fname, int s)
 		write(s, buf, nbytes + 4);
 		if (++count >= 1148)
 			break;
-	} while (nbytes == size - 4);
+	} while (nbytes == fsize - 4);
 	fclose(fp);
 
 	return 0;
