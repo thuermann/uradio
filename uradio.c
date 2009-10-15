@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.7 2009/10/15 11:09:34 urs Exp $
+ * $Id: uradio.c,v 1.8 2009/10/15 11:09:44 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -128,27 +128,18 @@ static int play(int client, const char *fname, int s)
 		printf("ftime %d\n", ftime);
 #endif
 		gettimeofday(&now, NULL);
-		if (next.tv_sec) {
-			sl = 1000000 * (next.tv_sec - now.tv_sec)
-				+ (next.tv_usec - now.tv_usec);
-#ifdef DEBUG
-			printf("%ld.%.6ld %ld.%.6ld %ld\n",
-			       now.tv_sec, now.tv_usec,
-			       next.tv_sec, next.tv_usec,
-			       sl);
-#endif
-			if (sl > 0)
-				usleep(sl);
-		} else {
+		if (next.tv_sec == 0)
 			next = now;
-			sl = 0;
+		sl = 1000000 * (next.tv_sec - now.tv_sec)
+			+ (next.tv_usec - now.tv_usec);
 #ifdef DEBUG
-			printf("%ld.%.6ld %ld.%.6ld %ld\n",
-			       now.tv_sec, now.tv_usec,
-			       next.tv_sec, next.tv_usec,
-			       sl);
+		printf("%ld.%.6ld %ld.%.6ld %ld\n",
+		       now.tv_sec, now.tv_usec,
+		       next.tv_sec, next.tv_usec,
+		       sl);
 #endif
-		}
+		if (sl > 0)
+			usleep(sl);
 		if ((next.tv_usec += ftime) >= 1000000) {
 			next.tv_usec -= 1000000;
 			next.tv_sec++;
