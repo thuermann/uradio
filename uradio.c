@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.12 2009/10/20 08:17:58 urs Exp $
+ * $Id: uradio.c,v 1.13 2009/10/20 08:18:48 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -21,7 +21,7 @@ static void usage(const char *name)
 }
 
 static void svc(int client, int s, char **names, int count);
-static int play(int client, const char *fname, int s);
+static int play(int client, const char *fname, int s, double len);
 static int mp3_hdr(const unsigned char *s, int *freq, int *bitrate, int *pad);
 
 static int debug = 0;
@@ -111,18 +111,26 @@ static const char header[] =
 
 static void svc(int client, int s, char **names, int count)
 {
+	char request[4096];
+	double len = 0;
+	char *cp;
+	int nbytes;
 	int idx;
 
+	nbytes = read(s, request, sizeof(request));
+	request[nbytes] = 0;
+	if (cp = strstr(request, "len="))
+		len = atof(cp + 4);
 	write(s, header, sizeof(header) - 1);
 
 	srand(time(NULL));
 	while (1) {
 		idx = rand() % count;
-		play(client, names[idx], s);
+		play(client, names[idx], s, len);
 	}
 }
 
-static int play(int client, const char *fname, int s)
+static int play(int client, const char *fname, int s, double len)
 {
 	static struct timeval next = { 0, 0 };
 	static time_t t0 = 0;
@@ -170,7 +178,7 @@ static int play(int client, const char *fname, int s)
 			next.tv_usec -= 1000000;
 			next.tv_sec++;
 		}
-		if (debug && count < 10) {
+		if (debug && count++ < 10) {
 			printf("%.2d  this = %ld.%.6ld, now = %ld.%.6ld, "
 			       "sl = %6d, next(%+d) = %ld.%.6ld\n",
 			       client,
@@ -182,7 +190,7 @@ static int play(int client, const char *fname, int s)
 		if (sl > 0)
 			usleep(sl);
 		write(s, buf, nbytes + 4);
-		if (++count >= 1148)
+		if (len > 0 && (len -= ftime / 1e6) <= 0)
 			break;
 	} while (nbytes == fsize - 4);
 	if (debug) {
