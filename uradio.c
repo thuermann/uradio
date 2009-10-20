@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.11 2009/10/20 08:17:19 urs Exp $
+ * $Id: uradio.c,v 1.12 2009/10/20 08:17:58 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 	int client = 0;
 	int errflag = 0;
 	int opt;
+	int one = 1;
 
 	while ((opt = getopt(argc, argv, "d")) != -1) {
 		switch (opt) {
@@ -65,9 +66,13 @@ int main(int argc, char **argv)
 		perror("socket");
 		exit(1);
 	}
+
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(8080);
+
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
 		exit(1);
