@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.13 2009/10/20 08:18:48 urs Exp $
+ * $Id: uradio.c,v 1.14 2009/10/23 07:18:31 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -39,6 +39,8 @@ int main(int argc, char **argv)
 	int errflag = 0;
 	int opt;
 	int one = 1;
+
+	setlinebuf(stdout);
 
 	while ((opt = getopt(argc, argv, "d")) != -1) {
 		switch (opt) {
