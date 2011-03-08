@@ -1,5 +1,5 @@
 /*
- * $Id: uradio.c,v 1.14 2009/10/23 07:18:31 urs Exp $
+ * $Id: uradio.c,v 1.15 2011/03/08 13:20:48 urs Exp $
  *
  * A simple radio station playing random MP3 files.
  */
@@ -160,7 +160,10 @@ static int play(int client, const char *fname, int s, double len)
 
 	fseek(fp, -128, SEEK_END);
 	fread(buf, 1, 128, fp);
-	write(s, buf, 128);
+	if (memcmp(buf, "TAG", 3) == 0) {
+		printf("Prepending ID3 v1 tag\n");
+		write(s, buf, 128);
+	}
 	rewind(fp);
 
 	count = 0;
