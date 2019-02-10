@@ -1,0 +1,8 @@
+This is a simple "Internet radio station" playing random songs on a
+TCP connection after accepting an HTTP request.  It was useful for
+debugging and developing an Internet radio client for mobile use, e.g.
+in a car.
+
+This code was mainly hacked in the last one or two hours of a car trip
+from Wolfsburg to Ingolstadt in Germany while sitting on the passenger
+seat with my laptop on my lap.
